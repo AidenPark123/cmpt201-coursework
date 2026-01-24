@@ -1,0 +1,54 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+static void trim_newline(char *s) {
+  size_t n = strlen(s);
+  if (n > 0 && s[n - 1] == '\n')
+    s[n - 1] = '\0';
+}
+
+int main(void) {
+  char *line = NULL;
+  size_t cap = 0;
+
+  while (1) {
+    printf("Enter programs to run.\n");
+    printf("> ");
+    fflush(stdout);
+
+    ssize_t nread = getline(&line, &cap, stdin);
+    if (nread == -1) {
+      break;
+    }
+
+    trim_newline(line);
+
+    if (line[0] == '\0') {
+      continue;
+    }
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+      perror("fork");
+      continue;
+    } else if (pid == 0) {
+
+      execl(line, line, (char *)NULL);
+
+      printf("Exec failure\n");
+      fflush(stdout);
+      _exit(1);
+    } else {
+      int status = 0;
+      (void)waitpid(pid, &status, 0);
+    }
+  }
+
+  free(line);
+  return 0;
+}
